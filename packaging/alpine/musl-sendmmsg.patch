@@ -1,0 +1,27 @@
+Build the send-counting test preload against musl, whose sendmmsg takes
+unsigned flags.
+
+--- a/tests/instrument-send.c
++++ b/tests/instrument-send.c
+@@ -190,7 +190,11 @@
+   }
+ }
+ 
+-#ifndef __FreeBSD__
++#if !defined(__FreeBSD__) && !defined(__GLIBC__)
++/* musl: flags is unsigned int */
++int
++sendmmsg (int sockfd, struct mmsghdr *msgvec, unsigned int vlen, unsigned int flags)
++#elif !defined(__FreeBSD__)
+ int
+ sendmmsg (int sockfd, struct mmsghdr *msgvec, unsigned int vlen, int flags)
+ #else
+@@ -203,7 +207,7 @@
+     return -1;
+   } else {
+ #ifndef __FreeBSD__
+-    int ret = ((int (*) (int sockfd, struct mmsghdr *msgvec, unsigned int vlen, int flags)) (
++    int ret = ((int (*) (int sockfd, struct mmsghdr *msgvec, unsigned int vlen, unsigned int flags)) (
+         dlsym (RTLD_NEXT, "sendmmsg"))) (sockfd, msgvec, vlen, flags);
+ #else
+     ssize_t ret = ((int (*) (int sockfd, struct mmsghdr *msgvec, size_t vlen, int flags)) (

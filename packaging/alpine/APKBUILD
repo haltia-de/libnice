@@ -1,0 +1,62 @@
+# Contributor: Leo <thinkabit.ukim@gmail.com>
+# Maintainer: Haltia <noreply@github.com>
+# Alpine's community/libnice, moved to 0.1.24 for Haltia: GStreamer's
+# webrtcbin (gst-plugins-bad 1.28) needs libnice >= 0.1.23, Alpine 3.24 has
+# 0.1.22. Same name and subpackages, so apk upgrades it; to be dropped once
+# Alpine ships >= 0.1.23.
+pkgname=libnice
+pkgver=0.1.24
+pkgrel=0
+pkgdesc="GLib ICE implementation"
+url="https://libnice.freedesktop.org/"
+arch="all"
+license="LGPL-2.1-or-later AND MPL-1.1"
+makedepends="
+	glib-dev
+	gnutls-dev
+	gstreamer-dev
+	gobject-introspection-dev
+	meson"
+checkdepends="gst-plugins-base" # appsrc for the GStreamer test (since 0.1.23)
+subpackages="
+	$pkgname-dbg
+	$pkgname-dev
+	$pkgname-gstreamer:_gst"
+source="https://nice.freedesktop.org/releases/libnice-$pkgver.tar.gz
+	libnice-meson-0.58.patch
+	test-pseudotcp.patch
+	musl-sendmmsg.patch
+	"
+
+build() {
+	abuild-meson \
+		-Db_lto=true \
+		-Dgtk_doc=disabled \
+		-Dtests="$(want_check && echo enabled || echo disabled)" \
+		-Dexamples=disabled \
+		-Dintrospection=enabled \
+		-Dcrypto-library=gnutls \
+		-Dgstreamer=enabled \
+		-Dgupnp=disabled builddir
+	meson compile -C builddir
+}
+
+check() {
+	meson test --print-errorlogs -C builddir
+}
+
+package() {
+	DESTDIR="$pkgdir" meson install --no-rebuild -C builddir
+}
+
+_gst() {
+	pkgdesc="Gstreamer 1.0 plugin for libnice"
+	amove usr/lib/gstreamer-*
+}
+
+sha512sums="
+ab4be35b2bcf19b303e4d3fcde9f5b8423169e921ae3453018966b22e8467d81d86494980b41d738f3ed9c7da383a6a2281f61fff9a726b9af4451712ba85d17  libnice-0.1.24.tar.gz
+c59962a20d554da909a993f5d83d8d96da927d0ac94cfef2f699468326509f5715e8f7054badd25d07819b733dcea13c308b72aff170c013f7004dadba960dd7  libnice-meson-0.58.patch
+c2a7664e441a8f078e82a4557c015894007cf1f332af1055576924e6c5fc583b04bec01d652ae86f438b89ae200094bba391410523761a1911ff8aedf2488d94  test-pseudotcp.patch
+ab25ddd40ceaa06d7f523901ebbeebc508bba57fc52a1aeb626a9ce4cb9c3c92c59b9d3cddb2590e8681860d5d016e282f3508a864a380d81ed426598865fbeb  musl-sendmmsg.patch
+"
