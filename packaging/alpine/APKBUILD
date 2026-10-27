@@ -3,11 +3,12 @@
 # Alpine's community/libnice, moved to 0.1.24 for Haltia: GStreamer's
 # webrtcbin (gst-plugins-bad 1.28) needs libnice >= 0.1.23, Alpine 3.24 has
 # 0.1.22. Same name and subpackages, so apk upgrades it; to be dropped once
-# Alpine ships >= 0.1.23. _p1: our patch for musl's thread stack
-# (musl-send-batches.patch).
+# Alpine ships >= 0.1.23. _p2: our patch for musl's thread stack
+# (musl-send-batches.patch); v0.1.24_p1 was tagged but never released.
+# pkgver is written out: ci's release check compares the line with the tag.
 pkgname=libnice
-_pkgver=0.1.24
-pkgver=${_pkgver}_p1
+pkgver=0.1.24_p2
+_pkgver=${pkgver%_p*}
 pkgrel=0
 pkgdesc="GLib ICE implementation"
 url="https://libnice.freedesktop.org/"
