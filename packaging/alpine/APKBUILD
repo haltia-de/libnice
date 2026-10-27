@@ -3,9 +3,11 @@
 # Alpine's community/libnice, moved to 0.1.24 for Haltia: GStreamer's
 # webrtcbin (gst-plugins-bad 1.28) needs libnice >= 0.1.23, Alpine 3.24 has
 # 0.1.22. Same name and subpackages, so apk upgrades it; to be dropped once
-# Alpine ships >= 0.1.23.
+# Alpine ships >= 0.1.23. _p1: our patch for musl's thread stack
+# (musl-send-batches.patch).
 pkgname=libnice
-pkgver=0.1.24
+_pkgver=0.1.24
+pkgver=${_pkgver}_p1
 pkgrel=0
 pkgdesc="GLib ICE implementation"
 url="https://libnice.freedesktop.org/"
@@ -22,11 +24,13 @@ subpackages="
 	$pkgname-dbg
 	$pkgname-dev
 	$pkgname-gstreamer:_gst"
-source="https://nice.freedesktop.org/releases/libnice-$pkgver.tar.gz
+source="https://nice.freedesktop.org/releases/libnice-$_pkgver.tar.gz
 	libnice-meson-0.58.patch
 	test-pseudotcp.patch
 	musl-sendmmsg.patch
+	musl-send-batches.patch
 	"
+builddir="$srcdir/$pkgname-$_pkgver"
 
 build() {
 	abuild-meson \
@@ -59,4 +63,5 @@ ab4be35b2bcf19b303e4d3fcde9f5b8423169e921ae3453018966b22e8467d81d86494980b41d738
 c59962a20d554da909a993f5d83d8d96da927d0ac94cfef2f699468326509f5715e8f7054badd25d07819b733dcea13c308b72aff170c013f7004dadba960dd7  libnice-meson-0.58.patch
 c2a7664e441a8f078e82a4557c015894007cf1f332af1055576924e6c5fc583b04bec01d652ae86f438b89ae200094bba391410523761a1911ff8aedf2488d94  test-pseudotcp.patch
 ab25ddd40ceaa06d7f523901ebbeebc508bba57fc52a1aeb626a9ce4cb9c3c92c59b9d3cddb2590e8681860d5d016e282f3508a864a380d81ed426598865fbeb  musl-sendmmsg.patch
+9bfa2d1eff357ae49a758f213f95d0fac7df52bc51c9bdc349bcb397ef036a3286ddb2deb44c290e903275aa8b12dd27617bd89edb93de7c2cda13de37d989ed  musl-send-batches.patch
 "
