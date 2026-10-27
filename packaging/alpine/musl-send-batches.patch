@@ -1,0 +1,60 @@
+Send many messages in batches of 64, so that the arrays libnice and
+g_socket_send_messages put on the stack fit a musl thread's 128 KiB stack.
+With 2000 messages (test-gstreamer) they overflowed it on aarch64.
+
+--- a/socket/udp-bsd.c
++++ b/socket/udp-bsd.c
+@@ -446,19 +446,41 @@
+       len = 1;
+   } else {
+     /* Multiple messages: use g_socket_send_messages, which might use
+-     * the more efficient sendmmsg if supported by the platform */
+-    GOutputMessage *go_messages = g_alloca (n_messages * sizeof (GOutputMessage));
+-    for (i = 0; i < n_messages; i++) {
+-      const NiceOutputMessage *message = &messages[i];
+-      go_messages[i].address = gaddr;
+-      go_messages[i].vectors = message->buffers;
+-      go_messages[i].num_vectors = message->n_buffers;
+-      go_messages[i].bytes_sent = 0;
+-      go_messages[i].control_messages = NULL;
+-      go_messages[i].num_control_messages = 0;
++     * the more efficient sendmmsg if supported by the platform. In
++     * batches: this array and the ones g_socket_send_messages puts on the
++     * stack must fit a musl thread's 128 KiB stack. */
++    GOutputMessage go_messages[64];
++    guint done = 0;
++
++    len = 0;
++    while (done < n_messages) {
++      guint n = MIN (n_messages - done, G_N_ELEMENTS (go_messages));
++      gint sent;
++
++      for (i = 0; i < n; i++) {
++        const NiceOutputMessage *message = &messages[done + i];
++        go_messages[i].address = gaddr;
++        go_messages[i].vectors = message->buffers;
++        go_messages[i].num_vectors = message->n_buffers;
++        go_messages[i].bytes_sent = 0;
++        go_messages[i].control_messages = NULL;
++        go_messages[i].num_control_messages = 0;
++      }
++      sent = g_socket_send_messages (sock->fileno, go_messages,
++          n, G_SOCKET_MSG_NONE, NULL, &child_error);
++      if (sent < 0) {
++        /* What went out before the error counts as sent. */
++        if (done > 0)
++          g_clear_error (&child_error);
++        else
++          len = sent;
++        break;
++      }
++      done += sent;
++      len = done;
++      if ((guint) sent < n)
++        break;
+     }
+-    len = g_socket_send_messages (sock->fileno, go_messages,
+-        n_messages, G_SOCKET_MSG_NONE, NULL, &child_error);
+   }
+ 
+   if (len < 0) {
